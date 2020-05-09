@@ -13,6 +13,18 @@ class Datalab:
         self.datalab.username_pw_set(self.username, self.password)
         
         self.datalab.connect(self.host, port=1883, keepalive=60)
+    
+
+    def _publish(self, topic, payload):
+        _result = self.datalab.publish(topic, payload)
+
+        if _result.rc != mqtt.MQTT_ERR_SUCCESS:
+            if _result.rc == mqtt.MQTT_ERR_NO_CONN:
+                #? trying to reconnect
+                print("ERROR: No connection ... trying to reconect")
+                self.datalab.connect(self.host, port=1883, keepalive=60)
+            else:
+                print("ERROR:", mqtt.error_string(_result.rc))
 
 
     def on_log(self, client, userdata, level, buf):
@@ -32,8 +44,8 @@ class Datalab:
 
         if tmp_topic in self._datalabTimeMap.keys():
             if (datetime.datetime.now() - self._datalabTimeMap[tmp_topic]).seconds > self.datalab_time_limit:
-                self.datalab.publish(topic, channel + " " + field + "=" + str(payload))
+                self._publish(topic, channel + " " + field + "=" + str(payload))
                 self._datalabTimeMap.update({tmp_topic:datetime.datetime.now()})
         else:
-            self.datalab.publish(topic, channel + " " + field + "=" + str(payload))
+            self._publish(topic, channel + " " + field + "=" + str(payload))
             self._datalabTimeMap.update({tmp_topic:datetime.datetime.now()})
